@@ -176,7 +176,26 @@ func CreatePipeline(d *schema.ResourceData, m interface{}) error {
 		log.Printf("Unable to create pipeline %s", d.Get("name"))
 		return err
 	}
-	log.Printf("Successfully created pipeline with id '%s'.", mutation.PipelineCreate.Pipeline.ID)
+
+	var pipelineID := mutation.PipelineCreate.Pipeline.ID
+
+	log.Printf("Successfully created pipeline with id '%s'.", pipelineID)
+
+	var webhookMutation struct {
+		PipelineCreateWebhook struct {
+			Pipeline PipelineNode
+		} `graphql:"PipelineCreateWebhook(input: {id: $pipeline_id}`
+	}
+	createWebhookVars := map[string]interface{}{
+		"pipeline_id": graphql.String(pipelineID),
+	}
+
+	log.Printf("Creating webhook for pipeline %s ...", vars["name"])
+	err = client.graphql.Mutate(context.Background(), &webhookMutation, createWebhookVars)
+	if err != nil {
+		log.Printf("Unable to create webhook for pipeline %s", vars["name"])
+		return err
+	}
 
 	teamPipelines := getTeamPipelinesFromSchema(d)
 	err = reconcileTeamPipelines(teamPipelines, &mutation.PipelineCreate.Pipeline, client)
